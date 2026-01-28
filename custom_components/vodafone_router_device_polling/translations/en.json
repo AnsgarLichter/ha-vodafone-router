@@ -10,7 +10,8 @@
           "password": "Password",
           "mac_filter": "MAC Address Filter (optional)",
           "enable_binary_sensor": "Enable Binary Sensors",
-          "enable_device_tracker": "Enable Device Trackers"
+          "enable_device_tracker": "Enable Device Trackers",
+          "scan_interval": "Scan Interval (seconds)"
         },
         "data_description": {
           "host": "The IP address of your Vodafone Station (usually 192.168.0.1)",
@@ -18,7 +19,8 @@
           "password": "Your router admin password",
           "mac_filter": "Comma-separated MAC addresses to include only specific devices (leave empty to include all devices). Example: aa:bb:cc:dd:ee:ff, 11:22:33:44:55:66",
           "enable_binary_sensor": "Create binary sensors showing device connectivity status (ON/OFF)",
-          "enable_device_tracker": "Create device trackers showing device presence (home/not_home)"
+          "enable_device_tracker": "Create device trackers showing device presence (home/not_home)",
+          "scan_interval": "How often to check for device changes in seconds (10-600, default: 30)"
         }
       }
     },
@@ -38,14 +40,16 @@
           "password": "Password",
           "mac_filter": "MAC Address Filter (optional)",
           "enable_binary_sensor": "Enable Binary Sensors",
-          "enable_device_tracker": "Enable Device Trackers"
+          "enable_device_tracker": "Enable Device Trackers",
+          "scan_interval": "Scan Interval (seconds)"
         },
         "data_description": {
           "username": "Your router admin username (usually 'admin')",
           "password": "Your router admin password",
           "mac_filter": "Comma-separated MAC addresses to include only specific devices (leave empty to include all devices). Example: aa:bb:cc:dd:ee:ff, 11:22:33:44:55:66",
           "enable_binary_sensor": "Create binary sensors showing device connectivity status (ON/OFF)",
-          "enable_device_tracker": "Create device trackers showing device presence (home/not_home)"
+          "enable_device_tracker": "Create device trackers showing device presence (home/not_home)",
+          "scan_interval": "How often to check for device changes in seconds (10-600, default: 30)"
         }
       }
     },

@@ -3,7 +3,17 @@ import logging
 from homeassistant import config_entries
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from .const import DOMAIN, ENTRY_DATA_HOST, OPTION_PASSWORD, OPTION_USERNAME, OPTION_MAC_FILTER, OPTION_ENABLE_BINARY_SENSOR, OPTION_ENABLE_DEVICE_TRACKER
+from .const import (
+    DOMAIN, 
+    ENTRY_DATA_HOST, 
+    OPTION_PASSWORD, 
+    OPTION_USERNAME, 
+    OPTION_MAC_FILTER, 
+    OPTION_ENABLE_BINARY_SENSOR, 
+    OPTION_ENABLE_DEVICE_TRACKER,
+    OPTION_SCAN_INTERVAL,
+    DEFAULT_SCAN_INTERVAL
+)
 from .vodafone_box import VodafoneBox
 
 _LOGGER = logging.getLogger(__name__)
@@ -31,6 +41,7 @@ class VodafoneConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             mac_filter = user_input.get(OPTION_MAC_FILTER, "")
             enable_binary_sensor = user_input.get(OPTION_ENABLE_BINARY_SENSOR, True)
             enable_device_tracker = user_input.get(OPTION_ENABLE_DEVICE_TRACKER, True)
+            scan_interval = user_input.get(OPTION_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
             
             _LOGGER.debug("Testing connection to Vodafone Station at %s with username %s", host, username)
 
@@ -52,6 +63,7 @@ class VodafoneConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         OPTION_MAC_FILTER: mac_filter,
                         OPTION_ENABLE_BINARY_SENSOR: enable_binary_sensor,
                         OPTION_ENABLE_DEVICE_TRACKER: enable_device_tracker,
+                        OPTION_SCAN_INTERVAL: scan_interval,
                     }
                 )
 
@@ -62,6 +74,7 @@ class VodafoneConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             vol.Optional(OPTION_MAC_FILTER, default=""): str,
             vol.Optional(OPTION_ENABLE_BINARY_SENSOR, default=True): bool,
             vol.Optional(OPTION_ENABLE_DEVICE_TRACKER, default=True): bool,
+            vol.Optional(OPTION_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL): vol.All(vol.Coerce(int), vol.Range(min=10, max=600)),
         })
         return self.async_show_form(step_id="user", data_schema=schema, errors=errors)
 
@@ -101,6 +114,7 @@ class VodafoneOptionsFlow(config_entries.OptionsFlow):
                         OPTION_MAC_FILTER: user_input[OPTION_MAC_FILTER],
                         OPTION_ENABLE_BINARY_SENSOR: user_input[OPTION_ENABLE_BINARY_SENSOR],
                         OPTION_ENABLE_DEVICE_TRACKER: user_input[OPTION_ENABLE_DEVICE_TRACKER],
+                        OPTION_SCAN_INTERVAL: user_input.get(OPTION_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL),
                     }
                 )
             except Exception as e:
@@ -115,6 +129,7 @@ class VodafoneOptionsFlow(config_entries.OptionsFlow):
             vol.Optional(OPTION_MAC_FILTER, default=current_options.get(OPTION_MAC_FILTER, "")): str,
             vol.Optional(OPTION_ENABLE_BINARY_SENSOR, default=current_options.get(OPTION_ENABLE_BINARY_SENSOR, True)): bool,
             vol.Optional(OPTION_ENABLE_DEVICE_TRACKER, default=current_options.get(OPTION_ENABLE_DEVICE_TRACKER, True)): bool,
+            vol.Optional(OPTION_SCAN_INTERVAL, default=current_options.get(OPTION_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)): vol.All(vol.Coerce(int), vol.Range(min=10, max=600)),
         })
         
         return self.async_show_form(
