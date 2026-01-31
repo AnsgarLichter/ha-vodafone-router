@@ -1,4 +1,4 @@
-# ha-vodafone-station
+# ha-vodafone-router
 
 This custom integration connects Home Assistant to a Vodafone Station router.
 Currently, the only functionality is to expose connected devices as device trackers or binary sensors.
