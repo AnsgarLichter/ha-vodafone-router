@@ -9,7 +9,14 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import DEVICE_PROPERTY_HOSTNAME, DEVICE_PROPERTY_MAC_ADDRESS, DEVICE_PROPERTY_NAME, DOMAIN, ROUTER_PROPERTY_LAN_DEVICES, ROUTER_PROPERTY_WLAN_DEVICES
+from .const import (
+    DEVICE_PROPERTY_HOSTNAME,
+    DEVICE_PROPERTY_MAC_ADDRESS,
+    DEVICE_PROPERTY_NAME,
+    DOMAIN,
+    ROUTER_PROPERTY_LAN_DEVICES,
+    ROUTER_PROPERTY_WLAN_DEVICES,
+)
 from .coordinator import VodafoneDeviceCoordinator
 
 _LOGGER = logging.getLogger(__name__)
@@ -21,7 +28,9 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up Vodafone device tracker entities."""
-    _LOGGER.info("Setting up Vodafone device tracker entities for entry: %s", entry.entry_id)
+    _LOGGER.info(
+        "Setting up Vodafone device tracker entities for entry: %s", entry.entry_id
+    )
 
     coordinator: VodafoneDeviceCoordinator = hass.data[DOMAIN][entry.entry_id]
 
@@ -31,23 +40,29 @@ async def async_setup_entry(
     _LOGGER.debug("Creating device tracker entities from connected devices")
     entities: list[VodafoneDeviceTracker] = []
     total_devices = 0
-    
+
     for dev_list_name in (ROUTER_PROPERTY_LAN_DEVICES, ROUTER_PROPERTY_WLAN_DEVICES):
         devices = coordinator.data.get(dev_list_name, [])
         _LOGGER.debug("Processing %s devices from %s", len(devices), dev_list_name)
-        
+
         for device in devices:
             total_devices += 1
             if not device.get(DEVICE_PROPERTY_MAC_ADDRESS):
                 _LOGGER.warning("Skipping device without MAC address: %s", device)
                 continue
 
-            _LOGGER.debug("Creating tracker entity for device: %s (%s)", 
-                         device.get(DEVICE_PROPERTY_HOSTNAME, 'Unknown'), 
-                         device.get(DEVICE_PROPERTY_MAC_ADDRESS))
+            _LOGGER.debug(
+                "Creating tracker entity for device: %s (%s)",
+                device.get(DEVICE_PROPERTY_HOSTNAME, "Unknown"),
+                device.get(DEVICE_PROPERTY_MAC_ADDRESS),
+            )
             entities.append(VodafoneDeviceTracker(coordinator, device))
 
-    _LOGGER.info("Created %s device tracker entities from %s total devices", len(entities), total_devices)
+    _LOGGER.info(
+        "Created %s device tracker entities from %s total devices",
+        len(entities),
+        total_devices,
+    )
     async_add_entities(entities)
 
 
@@ -67,16 +82,20 @@ class VodafoneDeviceTracker(TrackerEntity):
         # MAC is guaranteed here because we filtered earlier
         self._attr_name = f"{device.get(DEVICE_PROPERTY_HOSTNAME) or device.get(DEVICE_PROPERTY_NAME) or self.mac} Tracker"
         self._attr_unique_id = f"vodafone_{self.mac.replace(':', '').lower()}_tracker"
-        
-        _LOGGER.debug("Initialized device tracker for %s (MAC: %s, unique_id: %s)", 
-                     self._attr_name, self.mac, self._attr_unique_id)
+
+        _LOGGER.debug(
+            "Initialized device tracker for %s (MAC: %s, unique_id: %s)",
+            self._attr_name,
+            self.mac,
+            self._attr_unique_id,
+        )
 
     @property
     def state(self) -> str:
         """Return the state of the device tracker."""
         if self.coordinator.data is None:
             return STATE_NOT_HOME
-        
+
         connected_macs = {
             d.get(DEVICE_PROPERTY_MAC_ADDRESS)
             for d in self.coordinator.data.get(ROUTER_PROPERTY_LAN_DEVICES, [])
@@ -88,9 +107,11 @@ class VodafoneDeviceTracker(TrackerEntity):
             }
         )
         is_connected = self.mac in connected_macs
-        
+
         state = STATE_HOME if is_connected else STATE_NOT_HOME
-        _LOGGER.debug("Device tracker %s (%s) state: %s", self._attr_name, self.mac, state)
+        _LOGGER.debug(
+            "Device tracker %s (%s) state: %s", self._attr_name, self.mac, state
+        )
         return state
 
     @property
@@ -103,8 +124,12 @@ class VodafoneDeviceTracker(TrackerEntity):
 
     async def async_added_to_hass(self) -> None:
         """Register for coordinator updates."""
-        _LOGGER.debug("Adding device tracker %s (%s) to Home Assistant", self._attr_name, self.mac)
+        _LOGGER.debug(
+            "Adding device tracker %s (%s) to Home Assistant", self._attr_name, self.mac
+        )
         self.async_on_remove(
             self.coordinator.async_add_listener(self.async_write_ha_state)
         )
-        _LOGGER.debug("Registered device tracker %s for coordinator updates", self._attr_name)
+        _LOGGER.debug(
+            "Registered device tracker %s for coordinator updates", self._attr_name
+        )

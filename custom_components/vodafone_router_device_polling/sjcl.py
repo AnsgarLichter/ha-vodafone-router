@@ -12,7 +12,9 @@ class SJCL:
     DEFAULT_SJCL_TAGLENGTH = 128  # bits
 
     @staticmethod
-    def pbkdf2(password: str, salt_hex: str, iterations: int, key_size_bits: int) -> str:
+    def pbkdf2(
+        password: str, salt_hex: str, iterations: int, key_size_bits: int
+    ) -> str:
         salt = binascii.unhexlify(salt_hex)
 
         kdf = PBKDF2HMAC(

@@ -8,6 +8,7 @@ from .sjcl import SJCL
 
 _LOGGER = logging.getLogger(__name__)
 
+
 class VodafoneBox:
     def __init__(self, host: str):
         _LOGGER.debug("Initializing VodafoneBox for host: %s", host)
@@ -16,12 +17,14 @@ class VodafoneBox:
         _LOGGER.debug("Base URL set to: %s", self.base_url)
 
         self.session = requests.Session()
-        self.session.headers.update({
-            "X-Requested-With": "XMLHttpRequest",
-            "Referer": f"{self.base_url}/?overview",
-            "Origin": self.base_url,
-            "User-Agent": "Mozilla/5.0",
-        })
+        self.session.headers.update(
+            {
+                "X-Requested-With": "XMLHttpRequest",
+                "Referer": f"{self.base_url}/?overview",
+                "Origin": self.base_url,
+                "User-Agent": "Mozilla/5.0",
+            }
+        )
 
         self.session_id = None
         self.nonce = None
@@ -40,50 +43,71 @@ class VodafoneBox:
         url = f"{self.base_url}/php/{endpoint}?_n={self.nonce}"
         if params:
             url += f"&{params}"
-        
-        _LOGGER.debug("Making GET request to: %s with headers: %s", url, self._headers())
+
+        _LOGGER.debug(
+            "Making GET request to: %s with headers: %s", url, self._headers()
+        )
         response = self.session.get(url, headers=self._headers(), timeout=10)
-        _LOGGER.debug("GET response status: %s, content length: %s", response.status_code, len(response.content))
+        _LOGGER.debug(
+            "GET response status: %s, content length: %s",
+            response.status_code,
+            len(response.content),
+        )
         return response
 
     def _post(self, endpoint: str, data=None):
         url = f"{self.base_url}/php/{endpoint}?_n={self.nonce}"
-        _LOGGER.debug("Making POST request to: %s with data: %s and headers: %s", url, data, self._headers())
-        response = self.session.post(url, json=data, headers=self._headers(), timeout=10)
-        _LOGGER.debug("POST response status: %s, content length: %s", response.status_code, len(response.content))
+        _LOGGER.debug(
+            "Making POST request to: %s with data: %s and headers: %s",
+            url,
+            data,
+            self._headers(),
+        )
+        response = self.session.post(
+            url, json=data, headers=self._headers(), timeout=10
+        )
+        _LOGGER.debug(
+            "POST response status: %s, content length: %s",
+            response.status_code,
+            len(response.content),
+        )
         return response
 
     def _init_crypto_values(self):
         # First, make an initial request to establish session properly
         initial_resp = self.session.get(self.base_url, timeout=10)
-        
+
         # Get session ID from the initial response
         if initial_resp.cookies.get("PHPSESSID"):
             self.session_id = initial_resp.cookies.get("PHPSESSID")
-        
+
         # Now make a second request with the session established
         resp = self.session.get(self.base_url, timeout=10)
-        
+
         # Update session ID if it changed
         if resp.cookies.get("PHPSESSID"):
             self.session_id = resp.cookies.get("PHPSESSID")
-        
+
         print(f"Response text preview: {resp.text[:500]}...")
-        
+
         # Extract crypto values with error checking
         iv_match = re.search(r"var myIv = '(.+?)';", resp.text)
         salt_match = re.search(r"var mySalt = '(.+?)';", resp.text)
-        
+
         if not iv_match or not iv_match.group(1):
-            raise ValueError(f"Could not extract IV value. Found match: {iv_match.group(0) if iv_match else 'None'}")
-        
+            raise ValueError(
+                f"Could not extract IV value. Found match: {iv_match.group(0) if iv_match else 'None'}"
+            )
+
         if not salt_match or not salt_match.group(1):
-            raise ValueError(f"Could not extract salt value. Found match: {salt_match.group(0) if salt_match else 'None'}")
-        
+            raise ValueError(
+                f"Could not extract salt value. Found match: {salt_match.group(0) if salt_match else 'None'}"
+            )
+
         self.iv = iv_match.group(1)
         self.salt = salt_match.group(1)
         self.nonce = str(random.random())[2:7]
-        
+
         print(f"Extracted IV: '{self.iv}', Salt: '{self.salt}'")
 
     def login(self, username: str, password: str):
@@ -91,13 +115,18 @@ class VodafoneBox:
         _LOGGER.debug("Initializing crypto values")
         self._init_crypto_values()
 
-        js_data = json.dumps({
-            "Password": password,
-            "Nonce": self.session_id,
-        })
+        js_data = json.dumps(
+            {
+                "Password": password,
+                "Nonce": self.session_id,
+            }
+        )
         _LOGGER.debug("Prepared login data with session_id: %s", self.session_id)
 
-        _LOGGER.debug("Generating encryption key using PBKDF2 with salt: %s", self.salt[:10] + "...")
+        _LOGGER.debug(
+            "Generating encryption key using PBKDF2 with salt: %s",
+            self.salt[:10] + "...",
+        )
         self.key = SJCL.pbkdf2(
             password,
             self.salt,
@@ -105,7 +134,7 @@ class VodafoneBox:
             SJCL.DEFAULT_SJCL_KEYSIZEBITS,
         )
         _LOGGER.debug("Key generated successfully")
-        
+
         auth_data = "loginPassword"
         _LOGGER.debug("Encrypting login data using IV: %s", self.iv[:10] + "...")
         encrypt_data = SJCL.ccm_encrypt(
@@ -125,14 +154,18 @@ class VodafoneBox:
         _LOGGER.debug("Sending login request with payload for user: %s", username)
 
         resp = self._post("ajaxSet_Password.php", payload)
-        _LOGGER.debug("Login response status: %s, content: %s", resp.status_code, resp.text[:200])
-        
+        _LOGGER.debug(
+            "Login response status: %s, content: %s", resp.status_code, resp.text[:200]
+        )
+
         if resp.status_code == 200:
             _LOGGER.info("Login successful for user: %s", username)
         else:
-            _LOGGER.error("Login failed for user: %s with status: %s", username, resp.status_code)
+            _LOGGER.error(
+                "Login failed for user: %s with status: %s", username, resp.status_code
+            )
             raise Exception(f"Login failed with status {resp.status_code}: {resp.text}")
-        
+
         _LOGGER.debug("Parsing login response JSON")
         data = resp.json()
         _LOGGER.debug("Login response data: %s", data)
@@ -145,8 +178,10 @@ class VodafoneBox:
             raise RuntimeError("Login failed: wrong password")
 
         if "Lockout" in status:
-            wait_time = data.get('p_waitTime')
-            _LOGGER.error("Login locked for user: %s, wait time: %s", username, wait_time)
+            wait_time = data.get("p_waitTime")
+            _LOGGER.error(
+                "Login locked for user: %s, wait time: %s", username, wait_time
+            )
             raise RuntimeError(f"Login locked: {wait_time}")
 
         if "Match" in status:
@@ -172,9 +207,11 @@ class VodafoneBox:
         resp = self._post("ajaxSet_Session.php")
         login_status = resp.json().get("LoginStatus", "")
         _LOGGER.debug("Session response: %s", resp.json())
-        
+
         if "yes" not in login_status:
-            _LOGGER.warning("Session not fully established. Login status: %s", login_status)
+            _LOGGER.warning(
+                "Session not fully established. Login status: %s", login_status
+            )
         else:
             _LOGGER.info("Session successfully established")
 
@@ -182,7 +219,7 @@ class VodafoneBox:
         _LOGGER.info("Starting logout process")
         resp = self._post("logout.php")
         _LOGGER.debug("Logout response status: %s", resp.status_code)
-        
+
         if resp.status_code == 200:
             _LOGGER.info("Logout successful")
         else:
@@ -191,9 +228,12 @@ class VodafoneBox:
     def get_connected_devices(self):
         _LOGGER.debug("Fetching connected devices overview data")
         resp = self._get("overview_data.php")
-        _LOGGER.debug("Overview data response status: %s, content length: %s", 
-                     resp.status_code, len(resp.content))
-        
+        _LOGGER.debug(
+            "Overview data response status: %s, content length: %s",
+            resp.status_code,
+            len(resp.content),
+        )
+
         text = resp.text
         _LOGGER.debug("Overview data received, parsing device information")
 
@@ -203,20 +243,26 @@ class VodafoneBox:
                 text.split("json_lanAttachedDevice = ")[1].split(";")[0]
             )
             _LOGGER.info("Found %s LAN devices", len(lan_devices))
-            _LOGGER.debug("LAN Devices: %s", [d.get('MAC', 'Unknown') for d in lan_devices])
+            _LOGGER.debug(
+                "LAN Devices: %s", [d.get("MAC", "Unknown") for d in lan_devices]
+            )
 
             _LOGGER.debug("Extracting WLAN devices JSON from response")
             wireless_devices = json.loads(
                 text.split("json_primaryWlanAttachedDevice = ")[1].split(";")[0]
             )
             _LOGGER.info("Found %s WLAN devices", len(wireless_devices))
-            _LOGGER.debug("WLAN Devices: %s", [d.get('MAC', 'Unknown') for d in wireless_devices])
+            _LOGGER.debug(
+                "WLAN Devices: %s", [d.get("MAC", "Unknown") for d in wireless_devices]
+            )
 
             return {
                 "lanDevices": lan_devices,
                 "wlanDevices": wireless_devices,
             }
         except (json.JSONDecodeError, IndexError, KeyError) as e:
-            _LOGGER.error("Failed to parse device information from overview data: %s", e)
+            _LOGGER.error(
+                "Failed to parse device information from overview data: %s", e
+            )
             _LOGGER.debug("Response text preview: %s", text[:1000])
             raise
